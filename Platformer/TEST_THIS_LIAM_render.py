@@ -5,9 +5,11 @@ import glob
 # --- Music ---
 pygame.init()
 pygame.mixer.init()
-pygame.mixer.music.load("Music cuz why not/Joyful Tone.mp3")  # Replace with your file path
-pygame.mixer.music.play()
-
+try:
+    pygame.mixer.music.load("Music cuz why not/Joyful Tone.mp3")  # Replace with your file path
+    pygame.mixer.music.play()
+except Exception as e:
+    print(f"Error loading music: {e}")
 
 # --- Setup ---
 pygame.init()
@@ -15,17 +17,53 @@ windowed_size = (800, 600)
 screen = pygame.display.set_mode(windowed_size, pygame.RESIZABLE)
 pygame.display.set_caption("Tile Grid with Ground Collision")
 clock = pygame.time.Clock()
+image_cache = {}
+
+
+def get_image(file_path):
+    """
+    Loads an image from the file system or retrieves it from the cache.
+    """
+    if file_path not in image_cache:
+        if not os.path.exists(file_path):
+            print(f"File not found: {file_path}")
+            # Return a placeholder surface if the file is missing
+            return pygame.Surface((50, 50), pygame.SRCALPHA)
+        try:
+            image_cache[file_path] = pygame.image.load(file_path).convert_alpha()  # .convert_alpha() for transparency
+        except Exception as e:
+            print(f"Error loading image {file_path}: {e}")
+            return pygame.Surface((50, 50), pygame.SRCALPHA)
+    return image_cache[file_path]
+
+# Example usage:
+screen = pygame.display.set_mode((800, 600))
+pygame.display.set_caption("Image Caching Example")
+
+# Load images using the caching function
+try:
+    player_image = get_image("player.png")
+except Exception:
+    print("player.png not found, using placeholder.")
+    player_image = pygame.Surface((50, 50), pygame.SRCALPHA)
+    player_image.fill((255, 0, 0))  # Red placeholder
+
+try:
+    background_image = get_image("background.jpg")
+except Exception:
+    print("background.jpg not found, using placeholder.")
+    background_image = pygame.Surface((800, 600), pygame.SRCALPHA)
+    background_image.fill((0, 0, 255))  # Blue placeholder
 
 # --- Load and scale tile images ---
-def load_tile(filename, size):
+def load_tile(filename, size, door_destonation=None):
     path = os.path.join('Images', 'sprites', filename)
     try:
-        image = pygame.image.load(path).convert_alpha()
+        image = get_image(path)
         return pygame.transform.scale(image, size)
     except Exception as e:
         print(f"Error loading {filename}: {e}")
         return pygame.Surface(size, pygame.SRCALPHA)
-
 
 def load_ground_any(size, preferred="ground_greye.png"):
     pref_path = os.path.join('Images', 'sprites', preferred)
@@ -47,6 +85,8 @@ def load_ground_any(size, preferred="ground_greye.png"):
     surf.fill((120, 80, 40))
     pygame.draw.rect(surf, (80, 50, 20), surf.get_rect(), 2)
     return surf
+
+# The rest of your code remains unchanged...
     
 # --- Dynamic tile sizing ---
 def get_tile_sizes(screen_size):
@@ -81,12 +121,12 @@ class Tile:
 def draw_grid(surface, rows, cols, cell_size, offset):
     for r in range(rows + 1):
         pygame.draw.line(surface, (50, 50, 50),
-                         (offset.x, offset.y + r * cell_size),
-                         (offset.x + cols * cell_size, offset.y + r * cell_size))
+                        (offset.x, offset.y + r * cell_size),
+                        (offset.x + cols * cell_size, offset.y + r * cell_size))
     for c in range(cols + 1):
         pygame.draw.line(surface, (50, 50, 50),
-                         (offset.x + c * cell_size, offset.y),
-                         (offset.x + c * cell_size, offset.y + rows * cell_size))
+                        (offset.x + c * cell_size, offset.y),
+                        (offset.x + c * cell_size, offset.y + rows * cell_size))
 
 # --- Helper for large tile placement ---
 def is_top_left_of_large_tile(row, col, cell, tile_map):
@@ -152,10 +192,14 @@ FJ = Key('FJ')  # wall_left_1.png
 FK = Key('FK')  # wall_left_2.png
 FL = Key('FL')  # wall_right_1.png
 FM = Key('FM')  # wall_right_2.png
+DR = Key('DR')  # door right
+DL = Key('DL')  # door left
+DU = Key('DU')  # door up
+DD = Key('DD')  # door down
 NA = None
 
 # Load surfaces into a mapping so templates that use Key(...) can be resolved.
-def load_tile_surfaces(small_size, large_size):
+def load_tile_surfaces(small_size, large_size,door_destonation=None):
     # Create spawnpoint placeholder
     spawn_surf = pygame.Surface(small_size, pygame.SRCALPHA)
     spawn_surf.fill((0, 255, 0, 128))  # Semi-transparent green
@@ -181,6 +225,10 @@ def load_tile_surfaces(small_size, large_size):
         'FK': load_tile("wall_left_2.png", small_size),
         'FL': load_tile("wall_right_1.png", small_size),
         'FM': load_tile("wall_right_2.png", small_size),
+        'DR': load_tile("door_right.png", large_size,door_destonation),
+        'DL': load_tile("door_left.png", large_size,door_destonation),
+        'DU': load_tile("door_up.png", large_size,door_destonation),
+        'DD': load_tile("door_down.png", large_size,door_destonation),
     }
 
 assets = load_tile_surfaces(small_size, large_size)
@@ -379,7 +427,8 @@ def normalize_templates():
 
 
 def add_column_left():
-    global background_template, ground_template
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
     normalize_templates()
     for row in background_template:
         row.insert(0, NA)
@@ -390,11 +439,12 @@ def add_column_left():
 
 
 def remove_column_left():
-    global background_template, ground_template
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
     normalize_templates()
     # only remove if more than 1 column
     cols = max(len(background_template[0]) if background_template else 0,
-               len(ground_template[0]) if ground_template else 0)
+            len(ground_template[0]) if ground_template else 0)
     if cols <= 1:
         print('Cannot remove left column: minimum size reached')
         return
@@ -409,7 +459,8 @@ def remove_column_left():
 
 
 def add_column_right():
-    global background_template, ground_template
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
     normalize_templates()
     for row in background_template:
         row.append(NA)
@@ -420,10 +471,11 @@ def add_column_right():
 
 
 def remove_column_right():
-    global background_template, ground_template
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
     normalize_templates()
     cols = max(len(background_template[0]) if background_template else 0,
-               len(ground_template[0]) if ground_template else 0)
+            len(ground_template[0]) if ground_template else 0)
     if cols <= 1:
         print('Cannot remove right column: minimum size reached')
         return
@@ -438,10 +490,11 @@ def remove_column_right():
 
 
 def add_row_top():
-    global background_template, ground_template
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
     normalize_templates()
     cols = max(len(background_template[0]) if background_template else 0,
-               len(ground_template[0]) if ground_template else 0)
+            len(ground_template[0]) if ground_template else 0)
     new_bg = [NA] * cols
     new_gd = [NA] * cols
     background_template.insert(0, list(new_bg))
@@ -451,7 +504,8 @@ def add_row_top():
 
 
 def remove_row_top():
-    global background_template, ground_template
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
     if len(background_template) <= 1 and len(ground_template) <= 1:
         print('Cannot remove top row: minimum size reached')
         return
@@ -465,10 +519,10 @@ def remove_row_top():
 
 
 def add_row_bottom():
-    global background_template, ground_template
-    normalize_templates()
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
     cols = max(len(background_template[0]) if background_template else 0,
-               len(ground_template[0]) if ground_template else 0)
+            len(ground_template[0]) if ground_template else 0)
     new_bg = [NA] * cols
     new_gd = [NA] * cols
     background_template.append(list(new_bg))
@@ -478,7 +532,8 @@ def add_row_bottom():
 
 
 def remove_row_bottom():
-    global background_template, ground_template
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
     if len(background_template) <= 1 and len(ground_template) <= 1:
         print('Cannot remove bottom row: minimum size reached')
         return
@@ -489,7 +544,13 @@ def remove_row_bottom():
     normalize_templates()
     rebuild_maps_and_tiles()
     print('Removed row on bottom')
-
+def control_z_function(preveus_state,current_state):
+    global background_template, ground_template
+    background_template=preveus_state['background_template']
+    
+    ground_template=current_state['ground_template']
+    rebuild_maps_and_tiles()
+    
 
 def next_room():
     load_room(current_room + 1)
@@ -914,6 +975,8 @@ while running:
             elif event.key == pygame.K_8:
                 # 8 - remove row on bottom
                 remove_row_bottom()
+            elif event.key == pygame.K_z:
+                control_z_function(preveus_state,{'background_template':background_template,'ground_template':ground_template})
             # allow '[' and ']' to navigate rooms; some layouts send a unicode value
             elif (hasattr(event, 'unicode') and event.unicode == ']') or event.key == pygame.K_RIGHTBRACKET:
                 # next room
