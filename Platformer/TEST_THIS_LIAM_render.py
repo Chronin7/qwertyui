@@ -2,23 +2,68 @@ import pygame
 import os
 import glob
 
+# --- Music ---
+pygame.init()
+pygame.mixer.init()
+try:
+    pygame.mixer.music.load("Music cuz why not/Joyful Tone.mp3")  # Replace with your file path
+    pygame.mixer.music.play()
+except Exception as e:
+    print(f"Error loading music: {e}")
+
 # --- Setup ---
 pygame.init()
 windowed_size = (800, 600)
 screen = pygame.display.set_mode(windowed_size, pygame.RESIZABLE)
 pygame.display.set_caption("Tile Grid with Ground Collision")
 clock = pygame.time.Clock()
+image_cache = {}
+
+
+def get_image(file_path):
+    """
+    Loads an image from the file system or retrieves it from the cache.
+    """
+    if file_path not in image_cache:
+        if not os.path.exists(file_path):
+            print(f"File not found: {file_path}")
+            # Return a placeholder surface if the file is missing
+            return pygame.Surface((50, 50), pygame.SRCALPHA)
+        try:
+            image_cache[file_path] = pygame.image.load(file_path).convert_alpha()  # .convert_alpha() for transparency
+        except Exception as e:
+            print(f"Error loading image {file_path}: {e}")
+            return pygame.Surface((50, 50), pygame.SRCALPHA)
+    return image_cache[file_path]
+
+# Example usage:
+screen = pygame.display.set_mode((800, 600))
+pygame.display.set_caption("Image Caching Example")
+
+# Load images using the caching function
+try:
+    player_image = get_image("player.png")
+except Exception:
+    print("player.png not found, using placeholder.")
+    player_image = pygame.Surface((50, 50), pygame.SRCALPHA)
+    player_image.fill((255, 0, 0))  # Red placeholder
+
+try:
+    background_image = get_image("background.jpg")
+except Exception:
+    print("background.jpg not found, using placeholder.")
+    background_image = pygame.Surface((800, 600), pygame.SRCALPHA)
+    background_image.fill((0, 0, 255))  # Blue placeholder
 
 # --- Load and scale tile images ---
-def load_tile(filename, size):
+def load_tile(filename, size, door_destonation=None):
     path = os.path.join('Images', 'sprites', filename)
     try:
-        image = pygame.image.load(path).convert_alpha()
+        image = get_image(path)
         return pygame.transform.scale(image, size)
     except Exception as e:
         print(f"Error loading {filename}: {e}")
         return pygame.Surface(size, pygame.SRCALPHA)
-
 
 def load_ground_any(size, preferred="ground_greye.png"):
     pref_path = os.path.join('Images', 'sprites', preferred)
@@ -40,6 +85,8 @@ def load_ground_any(size, preferred="ground_greye.png"):
     surf.fill((120, 80, 40))
     pygame.draw.rect(surf, (80, 50, 20), surf.get_rect(), 2)
     return surf
+
+# The rest of your code remains unchanged...
     
 # --- Dynamic tile sizing ---
 def get_tile_sizes(screen_size):
@@ -74,12 +121,12 @@ class Tile:
 def draw_grid(surface, rows, cols, cell_size, offset):
     for r in range(rows + 1):
         pygame.draw.line(surface, (50, 50, 50),
-                         (offset.x, offset.y + r * cell_size),
-                         (offset.x + cols * cell_size, offset.y + r * cell_size))
+                        (offset.x, offset.y + r * cell_size),
+                        (offset.x + cols * cell_size, offset.y + r * cell_size))
     for c in range(cols + 1):
         pygame.draw.line(surface, (50, 50, 50),
-                         (offset.x + c * cell_size, offset.y),
-                         (offset.x + c * cell_size, offset.y + rows * cell_size))
+                        (offset.x + c * cell_size, offset.y),
+                        (offset.x + c * cell_size, offset.y + rows * cell_size))
 
 # --- Helper for large tile placement ---
 def is_top_left_of_large_tile(row, col, cell, tile_map):
@@ -131,6 +178,7 @@ AA = Key('AA')
 BA = Key('BA')
 BB = Key('BB')
 FG = Key('FG')
+SP = Key('SP')  # spawnpoint
 # additional ground tile keys (two-letter tokens starting with F)
 FA = Key('FA')  # center.png
 FB = Key('FB')  # curve_in_bl.png
@@ -144,14 +192,25 @@ FJ = Key('FJ')  # wall_left_1.png
 FK = Key('FK')  # wall_left_2.png
 FL = Key('FL')  # wall_right_1.png
 FM = Key('FM')  # wall_right_2.png
+DR = Key('DR')  # door right
+DL = Key('DL')  # door left
+DU = Key('DU')  # door up
+DD = Key('DD')  # door down
 NA = None
 
 # Load surfaces into a mapping so templates that use Key(...) can be resolved.
-def load_tile_surfaces(small_size, large_size):
+def load_tile_surfaces(small_size, large_size,door_destonation=None):
+    # Create spawnpoint placeholder
+    spawn_surf = pygame.Surface(small_size, pygame.SRCALPHA)
+    spawn_surf.fill((0, 255, 0, 128))  # Semi-transparent green
+    pygame.draw.rect(spawn_surf, (0, 255, 0), spawn_surf.get_rect(), 2)
+    pygame.draw.circle(spawn_surf, (0, 255, 0), (small_size[0] // 2, small_size[1] // 2), min(small_size) // 4)
+    
     return {
         'AA': load_tile("Basic Tile.png", small_size),
         'BA': load_tile("Basic Tile Claw Mark.png", large_size),
         'BB': load_tile("Basic Tile Hole.png", large_size),
+        'SP': spawn_surf,  # Add spawnpoint tile
         'FG': load_tile("ground_grey.png", small_size),
     # ground-specific tiles (two-letter F* keys)
         'FA': load_tile("center.png", small_size),
@@ -166,13 +225,17 @@ def load_tile_surfaces(small_size, large_size):
         'FK': load_tile("wall_left_2.png", small_size),
         'FL': load_tile("wall_right_1.png", small_size),
         'FM': load_tile("wall_right_2.png", small_size),
+        'DR': load_tile("door_right.png", large_size,door_destonation),
+        'DL': load_tile("door_left.png", large_size,door_destonation),
+        'DU': load_tile("door_up.png", large_size,door_destonation),
+        'DD': load_tile("door_down.png", large_size,door_destonation),
     }
 
 assets = load_tile_surfaces(small_size, large_size)
 
 # --- Map templates (single source of truth) ---
 # Use short keys in templates; we'll resolve them to loaded surfaces with resolve_map().
-background_template = [
+background_template1 = [
     [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
     [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
     [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
@@ -191,7 +254,7 @@ background_template = [
     [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
 ]
 
-ground_template = [
+ground_template1 = [
     [FA, FA, FI, FI, FI, FI, FI, FI, FI, FI, FD, NA, NA, NA, NA, NA, NA, NA, NA, NA],
     [FA, FD, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
     [FK, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
@@ -210,6 +273,51 @@ ground_template = [
     [FA, FA, FG, FG, FG, FA, FA, FA, FG, FG, FG, FG, FG, FG, FG, FG, FG, FG, FG, FG],
 ]
 
+background_template2 = [
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, BA, NA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, NA, NA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, BB, NA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, NA, NA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+    [AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA, AA],
+]
+
+ground_template2 = [
+    [FA, FA, FI, FI, FI, FI, FI, FI, FI, FI, FD, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FA, FD, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FK, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FJ, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FJ, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FJ, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FJ, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FJ, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FJ, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FJ, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FJ, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FK, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FK, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FJ, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FA, FB, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA],
+    [FA, FA, FG, FG, FG, FA, FA, FA, FG, FG, FG, FG, FG, FG, FG, FG, FG, FG, FG, FG],
+]
+
+# (ground_template1 is the primary ground template variable)
+
+# expose the primary templates under the names used throughout the code
+# (some parts of the script reference `background_template` / `ground_template`
+#  while the literal declarations were named background_template1 / ground_template1)
+background_template = background_template1
+ground_template = ground_template1
 
 def resolve_map(template, key_map):
         #Return a new map where keys in the template are replaced by surfaces from key_map.
@@ -228,7 +336,18 @@ def resolve_map(template, key_map):
                 out_row.append(key_map.get(cell))
             elif hasattr(cell, 'name'):
                 # Key-like object
-                out_row.append(key_map.get(cell.name))
+                # Special-case spawnpoint token 'SP': show it while editing (so user can see/place it),
+                # but make it invisible during play by resolving to None.
+                try:
+                    is_editor = bool(editor_mode)
+                except NameError:
+                    # If editor_mode isn't defined yet, default to False (play behavior)
+                    is_editor = False
+
+                if cell.name == 'SP':
+                    out_row.append(key_map.get('SP') if is_editor else None)
+                else:
+                    out_row.append(key_map.get(cell.name))
             else:
                 # assume this is already a Surface or similar
                 out_row.append(cell)
@@ -241,6 +360,204 @@ ground_map = resolve_map(ground_template, assets)
 
 background_tiles = build_tiles(background_map, small_size)
 ground_tiles = build_tiles(ground_map, small_size)
+
+# --- Multi-room support ---
+# Initialize rooms with matching numbered templates
+rooms = [
+    {
+        'background_template': background_template1,
+        'ground_template': ground_template1,
+        'name': 'Room 1',
+    },
+    {
+        'background_template': background_template2,
+        'ground_template': ground_template2,
+        'name': 'Room 2',
+    }
+]
+
+current_room = 0
+
+def rebuild_maps_and_tiles():
+    global background_map, ground_map, background_tiles, ground_tiles
+    background_map = resolve_map(background_template, assets)
+    ground_map = resolve_map(ground_template, assets)
+    background_tiles = build_tiles(background_map, small_size)
+    ground_tiles = build_tiles(ground_map, small_size)
+    # persist current templates into the rooms array so room switching keeps edits
+    try:
+        rooms[current_room]['background_template'] = background_template
+        rooms[current_room]['ground_template'] = ground_template
+    except Exception:
+        pass
+
+def load_room(idx: int):
+    """Switch to room `idx` (wraps)."""
+    global current_room, background_template, ground_template
+    current_room = idx % len(rooms)
+    
+    # Load the room templates
+    background_template = rooms[current_room]['background_template']
+    ground_template = rooms[current_room]['ground_template']
+    
+    # Make sure to rebuild maps and tiles
+    rebuild_maps_and_tiles()
+    
+    print(f"Loaded Room {current_room + 1}")
+
+
+# --- Template resize helpers -------------------------------------------------
+def normalize_templates():
+    """Ensure both background_template and ground_template have the same column counts
+    and that each row in a template has a consistent length by padding with NA.
+    """
+    global background_template, ground_template
+    # determine max columns across both templates
+    bg_cols = max((len(r) for r in background_template), default=0)
+    gd_cols = max((len(r) for r in ground_template), default=0)
+    max_cols = max(bg_cols, gd_cols, 1)
+
+    def pad_template(tpl):
+        for i in range(len(tpl)):
+            if len(tpl[i]) < max_cols:
+                tpl[i].extend([NA] * (max_cols - len(tpl[i])))
+
+    pad_template(background_template)
+    pad_template(ground_template)
+
+
+def add_column_left():
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
+    normalize_templates()
+    for row in background_template:
+        row.insert(0, NA)
+    for row in ground_template:
+        row.insert(0, NA)
+    rebuild_maps_and_tiles()
+    print('Added column on left')
+
+
+def remove_column_left():
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
+    normalize_templates()
+    # only remove if more than 1 column
+    cols = max(len(background_template[0]) if background_template else 0,
+            len(ground_template[0]) if ground_template else 0)
+    if cols <= 1:
+        print('Cannot remove left column: minimum size reached')
+        return
+    for row in background_template:
+        if row:
+            row.pop(0)
+    for row in ground_template:
+        if row:
+            row.pop(0)
+    rebuild_maps_and_tiles()
+    print('Removed column on left')
+
+
+def add_column_right():
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
+    normalize_templates()
+    for row in background_template:
+        row.append(NA)
+    for row in ground_template:
+        row.append(NA)
+    rebuild_maps_and_tiles()
+    print('Added column on right')
+
+
+def remove_column_right():
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
+    normalize_templates()
+    cols = max(len(background_template[0]) if background_template else 0,
+            len(ground_template[0]) if ground_template else 0)
+    if cols <= 1:
+        print('Cannot remove right column: minimum size reached')
+        return
+    for row in background_template:
+        if row:
+            row.pop()
+    for row in ground_template:
+        if row:
+            row.pop()
+    rebuild_maps_and_tiles()
+    print('Removed column on right')
+
+
+def add_row_top():
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
+    normalize_templates()
+    cols = max(len(background_template[0]) if background_template else 0,
+            len(ground_template[0]) if ground_template else 0)
+    new_bg = [NA] * cols
+    new_gd = [NA] * cols
+    background_template.insert(0, list(new_bg))
+    ground_template.insert(0, list(new_gd))
+    rebuild_maps_and_tiles()
+    print('Added row on top')
+
+
+def remove_row_top():
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
+    if len(background_template) <= 1 and len(ground_template) <= 1:
+        print('Cannot remove top row: minimum size reached')
+        return
+    if background_template:
+        background_template.pop(0)
+    if ground_template:
+        ground_template.pop(0)
+    normalize_templates()
+    rebuild_maps_and_tiles()
+    print('Removed row on top')
+
+
+def add_row_bottom():
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
+    cols = max(len(background_template[0]) if background_template else 0,
+            len(ground_template[0]) if ground_template else 0)
+    new_bg = [NA] * cols
+    new_gd = [NA] * cols
+    background_template.append(list(new_bg))
+    ground_template.append(list(new_gd))
+    rebuild_maps_and_tiles()
+    print('Added row on bottom')
+
+
+def remove_row_bottom():
+    global background_template, ground_template,preveus_state
+    preveus_state={'background_template':background_template,'ground_template':ground_template}
+    if len(background_template) <= 1 and len(ground_template) <= 1:
+        print('Cannot remove bottom row: minimum size reached')
+        return
+    if background_template:
+        background_template.pop()
+    if ground_template:
+        ground_template.pop()
+    normalize_templates()
+    rebuild_maps_and_tiles()
+    print('Removed row on bottom')
+def control_z_function(preveus_state,current_state):
+    global background_template, ground_template
+    background_template=preveus_state['background_template']
+    
+    ground_template=current_state['ground_template']
+    rebuild_maps_and_tiles()
+    
+
+def next_room():
+    load_room(current_room + 1)
+
+def prev_room():
+    load_room(current_room - 1)
+
 
 
 def save_templates_to_file():
@@ -317,6 +634,84 @@ def save_templates_to_file():
         f.write(src)
     with open(path, 'w', encoding='utf-8') as f:
         f.write(new_src)
+
+
+def template_to_names(template):
+    """Convert template of Keys/NA into list of token-name lists for JSON serialization."""
+    out = []
+    for row in template:
+        out_row = []
+        for cell in row:
+            if cell is None:
+                out_row.append('NA')
+            elif hasattr(cell, 'name'):
+                out_row.append(cell.name)
+            else:
+                # try to find name by identity in assets
+                found = None
+                for k, v in assets.items():
+                    if v is cell:
+                        found = k
+                        break
+                out_row.append(found or 'NA')
+        out.append(out_row)
+    return out
+
+
+def names_to_template(names):
+    """Convert list-of-name lists back into template using Key tokens or NA."""
+    out = []
+    for row in names:
+        out_row = []
+        for name in row:
+            if name is None or name == 'NA':
+                out_row.append(NA)
+            else:
+                token = globals().get(name)
+                out_row.append(token if token is not None else NA)
+        out.append(out_row)
+    return out
+
+
+def save_rooms_to_json(path=None):
+    import json
+    if path is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'rooms.json')
+    payload = []
+    for r in rooms:
+        payload.append({
+            'name': r.get('name', ''),
+            'background': template_to_names(r.get('background_template', [])),
+            'ground': template_to_names(r.get('ground_template', [])),
+        })
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(payload, f, indent=2)
+
+
+def load_rooms_from_json(path=None):
+    import json
+    global rooms
+    if path is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'rooms.json')
+    if not os.path.exists(path):
+        return False
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    new_rooms = []
+    for idx, r in enumerate(data):
+        bg = names_to_template(r.get('background', []))
+        gd = names_to_template(r.get('ground', []))
+        new_rooms.append({
+            'name': r.get('name', f'Room {idx}'),
+            'background_template': bg,
+            'ground_template': gd,
+        })
+    if new_rooms:
+        # replace rooms list in-place to preserve reference
+        rooms.clear()
+        rooms.extend(new_rooms)
+        return True
+    return False
 
 
 # --- Player setup ---
@@ -492,7 +887,7 @@ running = True
 editor_mode = False
 editing_ground = False  # if True edit ground_template, else background_template
 # order of editable keys (two-letter names) for selection with + / -
-key_order = ['AA', 'BA', 'BB', 'FG', 'FA', 'FB', 'FC', 'FD', 'FE', 'FF', 'FH', 'FI', 'FJ', 'FK', 'FL', 'FM']
+key_order = ['AA', 'BA', 'BB', 'SP', 'FG', 'FA', 'FB', 'FC', 'FD', 'FE', 'FF', 'FH', 'FI', 'FJ', 'FK', 'FL', 'FM']
 selected_idx = 0
 
 # map key names to Key tokens so templates can be assigned without quotes
@@ -546,12 +941,54 @@ while running:
             elif event.key == pygame.K_MINUS:
                 selected_idx = (selected_idx - 1) % len(key_order)
             elif event.key == pygame.K_s:
-                # save templates back into this python file (overwrite definitions)
+                # save rooms/templates to external JSON (rooms.json)
                 try:
-                    save_templates_to_file()
-                    print('Templates saved to file')
+                    # ensure current templates are persisted into rooms before saving
+                    rooms[current_room]['background_template'] = background_template
+                    rooms[current_room]['ground_template'] = ground_template
+                    save_rooms_to_json()
+                    print('Rooms saved to rooms.json')
                 except Exception as e:
-                    print('Failed to save templates:', e)
+                    print('Failed to save rooms:', e)
+            # Grid resize keys (1-8)
+            elif event.key == pygame.K_1:
+                # 1 - add column on left
+                add_column_left()
+            elif event.key == pygame.K_2:
+                # 2 - remove column on left
+                remove_column_left()
+            elif event.key == pygame.K_3:
+                # 3 - add column on right
+                add_column_right()
+            elif event.key == pygame.K_4:
+                # 4 - remove column on right
+                remove_column_right()
+            elif event.key == pygame.K_5:
+                # 5 - add row on top
+                add_row_top()
+            elif event.key == pygame.K_6:
+                # 6 - remove row on top
+                remove_row_top()
+            elif event.key == pygame.K_7:
+                # 7 - add row on bottom
+                add_row_bottom()
+            elif event.key == pygame.K_8:
+                # 8 - remove row on bottom
+                remove_row_bottom()
+            elif event.key == pygame.K_z:
+                control_z_function(preveus_state,{'background_template':background_template,'ground_template':ground_template})
+            # allow '[' and ']' to navigate rooms; some layouts send a unicode value
+            elif (hasattr(event, 'unicode') and event.unicode == ']') or event.key == pygame.K_RIGHTBRACKET:
+                # next room
+                try:
+                    next_room()
+                except Exception:
+                    pass
+            elif (hasattr(event, 'unicode') and event.unicode == '[') or event.key == pygame.K_LEFTBRACKET:
+                try:
+                    prev_room()
+                except Exception:
+                    pass
 
         elif event.type == pygame.VIDEORESIZE:
             screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
@@ -682,15 +1119,21 @@ while running:
     font = pygame.font.SysFont(None, 20)
     help_lines = [
         "D - Toggle Editor Mode (enter/exit)",
-        "T - Switch Layer (Grid / Ground)",
+        "T - Switch Layer (Background / Ground)",
         "+ / - - Change selected tile",
         "Mouse L - Place tile  |  Mouse R - Erase tile",
-        "S - Save templates to this python file (creates .bak backup)",
+        "1/2 - Add / Remove column on LEFT",
+        "3/4 - Add / Remove column on RIGHT",
+        "5/6 - Add / Remove row on TOP",
+        "7/8 - Add / Remove row on BOTTOM",
+        "SP - Spawnpoint (editor-only; highlights green before placement)",
+        "S - Save rooms/templates to rooms.json (persists current room)",
         "C - Toggle camera follow",
         "Arrow keys - Pan camera in Editor / Move player in Play",
         "Shift + Arrows - Pan camera when not following",
         "A/D or ←/→ - Player move  |  W / Space / ↑ - Jump",
         "G - Toggle grid  |  F - Toggle fullscreen",
+        "[ / ] - Previous / Next room",
     ]
 
     line_h = font.get_linesize()
@@ -710,7 +1153,7 @@ while running:
         status_y = top_y + 4
 
     # draw concise status below help/hint
-    status = f"MODE: {'EDITOR' if editor_mode else 'PLAY'}  LAYER: {'GROUND' if editing_ground else 'GRID'}  SELECT: {key_order[selected_idx]}"
+    status = f"MODE: {'EDITOR' if editor_mode else 'PLAY'}  ROOM: {rooms[current_room]['name']}  LAYER: {'GROUND' if editing_ground else 'GRID'}  SELECT: {key_order[selected_idx]}"
     status_surf = font.render(status, True, (220, 220, 220))
     screen.blit(status_surf, (8, status_y))
 
