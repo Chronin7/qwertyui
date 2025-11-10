@@ -1,17 +1,26 @@
 import pygame
 import os
 import glob
-
+import controller
 # --- Music ---
 pygame.init()
 pygame.mixer.init()
+joysticks=[]
 try:
     pygame.mixer.music.load("Music cuz why not/Joyful Tone.mp3")  # Replace with your file path
     pygame.mixer.music.play()
 except Exception as e:
     print(f"Error loading music: {e}")
-
+try:
+    controller.init_controller()
+except Exception as e:
+    print(f"Error initializing controller: {e}")
+try:
+    joysticks = controller.init_controller()
+except Exception as e:
+    print(f"Error initializing joysticks: {e}")
 # --- Setup ---
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 pygame.init()
 windowed_size = (800, 600)
 screen = pygame.display.set_mode(windowed_size, pygame.RESIZABLE)
@@ -21,20 +30,27 @@ image_cache = {}
 
 
 def get_image(file_path):
+    global image_cache
+    global SCRIPT_DIR
     """
     Loads an image from the file system or retrieves it from the cache.
+    Note: file_path here should be relative to your SCRIPT_DIR if you use the below helper.
     """
-    if file_path not in image_cache:
-        if not os.path.exists(file_path):
+    
+    # Use os.path.join to create the full absolute path
+    full_path = os.path.join(SCRIPT_DIR, file_path) 
+    
+    if full_path not in image_cache:
+        if not os.path.exists(full_path):
             print(f"File not found: {file_path}")
             # Return a placeholder surface if the file is missing
             return pygame.Surface((50, 50), pygame.SRCALPHA)
         try:
-            image_cache[file_path] = pygame.image.load(file_path).convert_alpha()  # .convert_alpha() for transparency
+            image_cache[full_path] = pygame.image.load(full_path).convert_alpha()
         except Exception as e:
-            print(f"Error loading image {file_path}: {e}")
+            print(f"Error loading image {full_path}: {e}")
             return pygame.Surface((50, 50), pygame.SRCALPHA)
-    return image_cache[file_path]
+    return image_cache[full_path]
 
 # Example usage:
 screen = pygame.display.set_mode((800, 600))
@@ -57,13 +73,11 @@ except Exception:
 
 # --- Load and scale tile images ---
 def load_tile(filename, size, door_destonation=None):
+    # Pass the relative path from the working directory to get_image
     path = os.path.join('Images', 'sprites', filename)
-    try:
-        image = get_image(path)
-        return pygame.transform.scale(image, size)
-    except Exception as e:
-        print(f"Error loading {filename}: {e}")
-        return pygame.Surface(size, pygame.SRCALPHA)
+    image = get_image(path) # get_image now handles joining with SCRIPT_DIR
+    return pygame.transform.scale(image, size)
+    # The try/except is now handled inside get_image
 
 def load_ground_any(size, preferred="ground_greye.png"):
     pref_path = os.path.join('Images', 'sprites', preferred)
@@ -1026,6 +1040,19 @@ while running:
                 
 
     keys = pygame.key.get_pressed()
+    state = controller.get_controler_states(joysticks)
+    if state['left']:
+        keys=pygame.key.get_pressed()
+        keys=keys[:pygame.K_a]+(1,)+keys[pygame.K_a+1:]
+    if state['right']:
+        keys=pygame.key.get_pressed()
+        keys=keys[:pygame.K_d]+(1,)+keys[pygame.K_d+1:]
+    if state['up']:
+        keys=pygame.key.get_pressed()
+        keys=keys[:pygame.K_w]+(1,)+keys[pygame.K_w+1:]
+    if state['jump']:
+        keys=pygame.key.get_pressed()
+        keys=keys[:pygame.K_SPACE]+(1,)+keys[pygame.K_SPACE+1:]
     # camera controls
     if editor_mode:
         # in editor mode, arrow keys pan the camera directly
