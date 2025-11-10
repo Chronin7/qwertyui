@@ -3,8 +3,19 @@ import os
 import glob
 import controller
 # --- Music ---
-pygame.init()
-pygame.mixer.init()
+try:
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
+    os.chdir(PROJECT_ROOT)
+except Exception as e:
+    print(f"Error changing directory to project root: {e}")
+try:
+    pygame.init()
+except Exception as e:
+    print(f"Error initializing pygame: {e}")
+try:
+    pygame.mixer.init()
+except Exception as e:
+    print(f"Error initializing mixer: {e}")
 joysticks=[]
 try:
     pygame.mixer.music.load("Music cuz why not/Joyful Tone.mp3")  # Replace with your file path
@@ -31,14 +42,15 @@ image_cache = {}
 
 def get_image(file_path):
     global image_cache
-    global SCRIPT_DIR
+    # global SCRIPT_DIR # Remove this line
+    global PROJECT_ROOT # Use the new global variable
     """
     Loads an image from the file system or retrieves it from the cache.
-    Note: file_path here should be relative to your SCRIPT_DIR if you use the below helper.
     """
     
     # Use os.path.join to create the full absolute path
-    full_path = os.path.join(SCRIPT_DIR, file_path) 
+    # full_path = os.path.join(SCRIPT_DIR, file_path) # Old path join
+    full_path = os.path.join(PROJECT_ROOT, file_path) # New path join
     
     if full_path not in image_cache:
         if not os.path.exists(full_path):
@@ -1040,7 +1052,7 @@ while running:
                 
 
     keys = pygame.key.get_pressed()
-    state = controller.get_controler_states(joysticks)
+    state = controller.get_controller_states(joysticks)
     if state['left']:
         keys=pygame.key.get_pressed()
         keys=keys[:pygame.K_a]+(1,)+keys[pygame.K_a+1:]
