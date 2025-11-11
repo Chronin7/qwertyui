@@ -178,6 +178,8 @@ def build_tiles(tile_map, small_size):
 
 # --- Initial sizes and assets ---
 small_size, large_size = get_tile_sizes(windowed_size)
+extra_small_size = (small_size[0]//2, small_size[1]//2)
+extra_large_size = (large_size[0]*2, large_size[1]*2)
 # --- Key tokens so templates can use unquoted identifiers like AA, BA, FG ---
 class Key:
     def __init__(self, name: str):
@@ -254,11 +256,30 @@ EN30 = Key('EN30')  # enemy30
 #we may need more than 30 enemies
 WT = Key('WT')  # water tile
 LT = Key('LT')  # lava tile
-
+WTT = Key('WTT')  # water tile top
+LTT = Key('LTT')  # lava tile top
+CRR = Key('CRR')  # cristal tile red
+CRRL = Key('CRRL')  # cristal tile red large
+CRO = Key('CRO')  # cristal tile orange
+CROL = Key('CROL')  # cristal tile orange large
+CRG = Key('CRG')  # cristal tile green
+CRGL = Key('CRGL')  # cristal tile green large
+CRT = Key('CRT') # cristal tile teal
+CRTL = Key('CRTL') #cristal tile teal large
+CRB = Key('CRB')  # cristal tile blue
+CRBL = Key('CRBL')  # cristal tile blue large
+CRDB = Key('CRDB')  # cristal tile dark blue
+CRDBL = Key('CRDBL')  # cristal tile dark blue large
+CRPU = Key('CRPU')  # cristal tile purple
+CRPUL = Key('CRPUL')  # cristal tile purple large
+CRP = Key('CRP') # cristal tile pink
+CRPL = Key('CRPL') #cristal tile pink large
+CRS = Key('CRS') # cristal tile silver
+CRSL = Key('CRSL') #cristal tile silver large
 NA = None
 
 # Load surfaces into a mapping so templates that use Key(...) can be resolved.
-def load_tile_surfaces(small_size, large_size,door_destonation=None):
+def load_tile_surfaces(extra_small_size,small_size, large_size,extra_large_size,door_destonation=None):
     # Create spawnpoint placeholder
     spawn_surf = pygame.Surface(small_size, pygame.SRCALPHA)
     spawn_surf.fill((0, 255, 0, 128))  # Semi-transparent green
@@ -288,9 +309,58 @@ def load_tile_surfaces(small_size, large_size,door_destonation=None):
         'DL': load_tile("door_left.png", large_size,door_destonation),
         'DU': load_tile("door_up.png", large_size,door_destonation),
         'DD': load_tile("door_down.png", large_size,door_destonation),
+        'PW1': load_tile("powerup1.png", small_size),
+        'PW2': load_tile("powerup2.png", small_size),
+        'PW3': load_tile("powerup3.png", small_size),
+        'PW4': load_tile("powerup4.png", small_size),
+        'PW5': load_tile("powerup5.png", small_size),
+        'PW6': load_tile("powerup6.png", small_size),
+        'PW7': load_tile("powerup7.png", small_size),
+        'BS1': load_tile("boss1.png", extra_large_size),
+        'BS2': load_tile("boss2.png", extra_large_size),
+        'BS3': load_tile("boss3.png", extra_large_size),
+        'BS4': load_tile("boss4.png", extra_large_size),
+        'BS5': load_tile("boss5.png", extra_large_size),
+        'BS6': load_tile("boss6.png", extra_large_size),
+        'BS7': load_tile("boss7.png", extra_large_size),
+        'EN1': load_tile("enemy1.png", small_size),
+        'EN2': load_tile("enemy2.png", small_size),
+        'EN3': load_tile("enemy3.png", small_size),
+        'EN4': load_tile("enemy4.png", small_size),
+        'EN5': load_tile("enemy5.png", extra_small_size),
+        'EN6': load_tile("enemy6.png", extra_large_size),
+        'EN7': load_tile("enemy7.png", large_size),
+        'EN8': load_tile("enemy8.png", small_size),
+        'EN9': load_tile("enemy9.png", small_size),
+        'EN10': load_tile("enemy10.png", small_size),
+        'EN11': load_tile("enemy11.png", small_size),
+        'EN12': load_tile("enemy12.png", small_size),
+        'EN13': load_tile("enemy13.png", small_size),
+        'EN14': load_tile("enemy14.png", small_size),
+        'EN15': load_tile("enemy15.png", small_size),
+        'EN16': load_tile("enemy16.png", small_size),
+        'EN17': load_tile("enemy17.png", small_size),
+        'EN18': load_tile("enemy18.png", small_size),
+        'EN19': load_tile("enemy19.png", small_size),
+        'EN20': load_tile("enemy20.png", small_size),
+        'EN21': load_tile("enemy21.png", small_size),
+        'EN22': load_tile("enemy22.png", small_size),
+        'EN23': load_tile("enemy23.png", small_size),
+        'EN24': load_tile("enemy24.png", small_size),
+        'EN25': load_tile("enemy25.png", small_size),
+        'EN26': load_tile("enemy26.png", small_size),
+        'EN27': load_tile("enemy27.png", small_size),
+        'EN28': load_tile("enemy28.png", small_size),
+        'EN29': load_tile("enemy29.png", small_size),
+        'EN30': load_tile("enemy30.png", small_size),
+        'WT': load_tile("water_tile.png", small_size),
+        'LT': load_tile("lava_tile.png", small_size),
+        'WTT': load_tile("water_tile_top.png", small_size),
+        'LTT': load_tile("lava_tile_top.png", small_size),
+           
     }
 
-assets = load_tile_surfaces(small_size, large_size)
+assets = load_tile_surfaces(extra_small_size,small_size, large_size,extra_large_size)
 
 # --- Map templates (single source of truth) ---
 # Use short keys in templates; we'll resolve them to loaded surfaces with resolve_map().
@@ -972,9 +1042,11 @@ while running:
                     screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.FULLSCREEN)
                 else:
                     screen = pygame.display.set_mode(windowed_size, pygame.RESIZABLE)
-                small_size, large_size = get_tile_sizes(screen.get_size())
+                small_size, large_size ,= get_tile_sizes(screen.get_size())
+                extra_small_size = (small_size[0]//2, small_size[1]//2)
+                extra_large_size = (large_size[0]*2, large_size[1]*2)
                 # reload assets at the new size and rebuild maps
-                assets = load_tile_surfaces(small_size, large_size)
+                assets = load_tile_surfaces(extra_small_size,small_size, large_size,extra_large_size)
                 background_map = resolve_map(background_template, assets)
                 ground_map = resolve_map(ground_template, assets)
                 background_tiles = build_tiles(background_map, small_size)
@@ -1052,8 +1124,10 @@ while running:
         elif event.type == pygame.VIDEORESIZE:
             screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
             small_size, large_size = get_tile_sizes((event.w, event.h))
+            extra_small_size = (small_size[0]//2, small_size[1]//2)
+            extra_large_size = (large_size[0]*2, large_size[1]*2)
             # reload assets at the new size and rebuild maps
-            assets = load_tile_surfaces(small_size, large_size)
+            assets = load_tile_surfaces(extra_small_size,small_size, large_size,extra_large_size)
             background_map = resolve_map(background_template, assets)
             ground_map = resolve_map(ground_template, assets)
             background_tiles = build_tiles(background_map, small_size)
@@ -1082,16 +1156,65 @@ while running:
                 ground_map = resolve_map(ground_template, assets)
                 background_tiles = build_tiles(background_map, small_size)
                 ground_tiles = build_tiles(ground_map, small_size)
-    #------ this is the controller input---------
-    # joystick = pygame.joystick.Joystick(1)
-    
-    # axis = joystick.get_axis(0)
-    # button = joystick.get_button(0)
-
+    # ---- external controller handaling ----
+    try:
+        joystick1x=round(pygame.joystick.Joystick(0).get_axis(0),2)
+        joystick1y=round(pygame.joystick.Joystick(0).get_axis(1),2)
+        joystick2x=round(pygame.joystick.Joystick(1).get_axis(0),2)
+        joystick2y=round(pygame.joystick.Joystick(1).get_axis(1),2)
+        trigger1=round(pygame.joystick.joistick(2).get_axis(0),2)
+        trigger1=round(pygame.joystick.joistick(3).get_axis(0),2)
+        axis_val={
+            "joystick1x":joystick1x,
+            "joystick1y":joystick1y,
+            "joystick2x":joystick2x,
+            "joystick2y":joystick2y,
+            "trigger1":trigger1,
+            "trigger2":trigger1
+        }
+    except Exception as e:
+        print(f"Joystick error: {e} at lines {e.__traceback__.tb_lineno}")
+    # ---- get buton status ----
+    try:
+        buttonA=pygame.joystick.Joystick(0).get_button(0)
+        buttonB=pygame.joystick.Joystick(0).get_button(1)
+        buttonX=pygame.joystick.Joystick(0).get_button(2)
+        buttonY=pygame.joystick.Joystick(0).get_button(3)
+        left_bumper=pygame.joystick.Joystick(0).get_button(4)
+        right_bumper=pygame.joystick.Joystick(0).get_button(5)
+        left_joystick=pygame.joystick.Joystick(0).get_button(6)
+        right_joystick=pygame.joystick.Joystick(0).get_button(7)
+        windows_buton=pygame.joystick.Joystick(0).get_button(8)
+        xbuton=pygame.joystick.Joystick(0).get_button(9) #will not use
+        menu_buton=pygame.joystick.Joystick(0).get_button(10)
+        d_pad_up=pygame.joystick.Joystick(0).get_button(11)
+        d_pad_down=pygame.joystick.Joystick(0).get_button(12)
+        d_pad_left=pygame.joystick.Joystick(0).get_button(13)
+        d_pad_right=pygame.joystick.Joystick(0).get_button(14)
+        buton_status={
+            "buttonA":buttonA,
+            "buttonB":buttonB,
+            "buttonX":buttonX,
+            "buttonY":buttonY,
+            "left_bumper":left_bumper,
+            "right_bumper":right_bumper,
+            "left_joystick":left_joystick,
+            "right_joystick":right_joystick,
+            "windows_buton":windows_buton,
+            "xbuton going to be unused":xbuton,
+            "menu_buton":menu_buton,
+            "d_pad_up":d_pad_up,
+            "d_pad_down":d_pad_down,
+            "d_pad_left":d_pad_left,
+            "d_pad_right":d_pad_right
+        }
+    except Exception as e:
+        print(f"Joystick button error: {e} at lines {e.__traceback__.tb_lineno}")
     keys = pygame.key.get_pressed()
     # camera controls
     if editor_mode:
         # in editor mode, arrow keys pan the camera directly
+        # keyboard controll
         if keys[pygame.K_LEFT]:
             camera_offset.x += scroll_speed
         if keys[pygame.K_RIGHT]:
@@ -1100,6 +1223,18 @@ while running:
             camera_offset.y += scroll_speed
         if keys[pygame.K_DOWN]:
             camera_offset.y -= scroll_speed
+        # controller controlliung
+        try:
+            if axis_val[joystick1x]<-0.2:
+                camera_offset.x += scroll_speed
+            if axis_val[joystick1x]>0.2:
+                camera_offset.x -= scroll_speed
+            if axis_val[joystick1y]<-0.2:
+                camera_offset.y += scroll_speed
+            if axis_val[joystick1y]>0.2:
+                camera_offset.y -= scroll_speed
+        except Exception as e:
+            print(f"Joystick camera control error: {e} at lines {e.__traceback__.tb_lineno}")
     else:
         # camera controls (Shift + arrows) when camera isn't following the player
         if not camera_follows:
@@ -1112,6 +1247,15 @@ while running:
                     camera_offset.y += scroll_speed
                 if keys[pygame.K_DOWN]:
                     camera_offset.y -= scroll_speed
+        # camera contolls by controller
+        try:
+            if not camera_follows and buton_status["windows_buton"]==1:
+                if abs(axis_val[joystick1x])>0.2:
+                    camera_offset.x+=-axis_val[joystick1x]*scroll_speed
+                if abs(axis_val[joystick1y])>0.2:
+                    camera_offset.y+=-axis_val[joystick1y]*scroll_speed
+        except Exception as e:
+            print(f"Joystick camera control error: {e} at lines {e.__traceback__.tb_lineno}")
 
     # player input (A/D or left/right), jump with W or SPACE or UP
     move_x = 0
@@ -1119,14 +1263,28 @@ while running:
         move_x = -speed
     if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
         move_x = speed
-
+    # controller player movement with a limit of speed
+    try:
+        if abs(axis_val[joystick2x])>0.2:
+            move_x=axis_val[joystick2x]*speed
+        if buton_status["d_pad_left"]==1:
+            move_x=-speed
+        if buton_status["d_pad_right"]==1:
+            move_x=speed
+    except Exception as e:
+        print(f"Joystick player movement error: {e} at lines {e.__traceback__.tb_lineno}")
     # apply horizontal movement and resolve collisions
     resolve_player_collisions(move_x, 0)
 
     # jump (only when on ground)
     if (keys[pygame.K_w] or keys[pygame.K_SPACE] or keys[pygame.K_UP]) and on_ground:
         vel.y = jump_speed
-
+    # controller jump
+    try:
+        if (buton_status["buttonA"]==1 or buton_status["d_pad_up"]==1) and on_ground:
+            vel.y=jump_speed
+    except Exception as e:
+        print(f"Joystick jump error: {e} at lines {e.__traceback__.tb_lineno}")
     # apply gravity
     vel.y += gravity
 
