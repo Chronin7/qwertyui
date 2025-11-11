@@ -1,7 +1,6 @@
 import pygame
 import os
 import glob
-import controller
 # --- Music ---
 try:
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
@@ -22,40 +21,26 @@ try:
     pygame.mixer.music.play()
 except Exception as e:
     print(f"Error loading music: {e}")
-try:
-    controller.init_controller()
-except Exception as e:
-    print(f"Error initializing controller: {e}")
-try:
-    joysticks = controller.init_controller()
-except Exception as e:
-    print(f"Error initializing joysticks: {e}")
 # --- Setup ---
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+IMAGE_DIR = os.path.join(PROJECT_ROOT)
 pygame.init()
 windowed_size = (800, 600)
 screen = pygame.display.set_mode(windowed_size, pygame.RESIZABLE)
 pygame.display.set_caption("Tile Grid with Ground Collision")
 clock = pygame.time.Clock()
 image_cache = {}
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))  # directory of the current script
 
+def get_files(file_name):
+    return os.path.join(file_name)
 
-def get_image(file_path):
-    global image_cache
-    # global SCRIPT_DIR # Remove this line
-    global PROJECT_ROOT # Use the new global variable
-    """
-    Loads an image from the file system or retrieves it from the cache.
-    """
-    
-    # Use os.path.join to create the full absolute path
-    # full_path = os.path.join(SCRIPT_DIR, file_path) # Old path join
-    full_path = os.path.join(PROJECT_ROOT, file_path) # New path join
-    
+def get_image(file_name):
+    full_path = os.path.join(PROJECT_ROOT, 'Images', file_name)
+
     if full_path not in image_cache:
         if not os.path.exists(full_path):
-            print(f"File not found: {file_path}")
-            # Return a placeholder surface if the file is missing
+            print(f"File not found: {full_path}")
             return pygame.Surface((50, 50), pygame.SRCALPHA)
         try:
             image_cache[full_path] = pygame.image.load(full_path).convert_alpha()
@@ -86,18 +71,18 @@ except Exception:
 # --- Load and scale tile images ---
 def load_tile(filename, size, door_destonation=None):
     # Pass the relative path from the working directory to get_image
-    path = os.path.join('Images', 'sprites', filename)
+    path = os.path.join(filename)
     image = get_image(path) # get_image now handles joining with SCRIPT_DIR
     return pygame.transform.scale(image, size)
     # The try/except is now handled inside get_image
 
 def load_ground_any(size, preferred="ground_greye.png"):
-    pref_path = os.path.join('Images', 'sprites', preferred)
+    pref_path = os.path.join(preferred)
     if os.path.exists(pref_path):
         return load_tile(preferred, size)
 
     # Search for any ground_*.png
-    candidates = glob.glob(os.path.join('Images', 'sprites', 'ground_*.png'))
+    candidates = glob.glob(os.path.join('sprites', 'ground_*.png'))
     candidates.sort()
     if candidates:
         try:
@@ -222,6 +207,54 @@ DR = Key('DR')  # door right
 DL = Key('DL')  # door left
 DU = Key('DU')  # door up
 DD = Key('DD')  # door down
+PW1 = Key('PW1')  # powerup1
+PW2 = Key('PW2')  # powerup2
+PW3 = Key('PW3')  # powerup3
+PW4 = Key('PW4')  # powerup4
+PW5 = Key('PW5')  # powerup5
+PW6 = Key('PW6')  # powerup6
+PW7 = Key('PW7')  # powerup7
+BS1 = Key('BS1')  # boss1
+BS2 = Key('BS2')  # boss2
+BS3 = Key('BS3')  # boss3
+BS4 = Key('BS4')  # boss4
+BS5 = Key('BS5')  # boss5
+BS6 = Key('BS6')  # boss6
+BS7 = Key('BS7')  # boss7
+EN1 = Key('EN1')  # enemy1
+EN2 = Key('EN2')  # enemy2
+EN3 = Key('EN3')  # enemy3
+EN4 = Key('EN4')  # enemy4
+EN5 = Key('EN5')  # enemy5
+EN6 = Key('EN6')  # enemy6
+EN7 = Key('EN7')  # enemy7
+EN8 = Key('EN8')  # enemy8
+EN9 = Key('EN9')  # enemy9
+EN10 = Key('EN10')  # enemy10
+EN11 = Key('EN11')  # enemy11
+EN12 = Key('EN12')  # enemy12
+EN13 = Key('EN13')  # enemy13
+EN14 = Key('EN14')  # enemy14
+EN15 = Key('EN15')  # enemy15
+EN16 = Key('EN16')  # enemy16
+EN17 = Key('EN17')  # enemy17
+EN18 = Key('EN18')  # enemy18
+EN19 = Key('EN19')  # enemy19
+EN20 = Key('EN20')  # enemy20
+EN21 = Key('EN21')  # enemy21
+EN22 = Key('EN22')  # enemy22
+EN23 = Key('EN23')  # enemy23
+EN24 = Key('EN24')  # enemy24
+EN25 = Key('EN25')  # enemy25
+EN26 = Key('EN26')  # enemy26
+EN27 = Key('EN27')  # enemy27
+EN28 = Key('EN28')  # enemy28
+EN29 = Key('EN29')  # enemy29
+EN30 = Key('EN30')  # enemy30
+#we may need more than 30 enemies
+WT = Key('WT')  # water tile
+LT = Key('LT')  # lava tile
+
 NA = None
 
 # Load surfaces into a mapping so templates that use Key(...) can be resolved.
@@ -1049,22 +1082,13 @@ while running:
                 ground_map = resolve_map(ground_template, assets)
                 background_tiles = build_tiles(background_map, small_size)
                 ground_tiles = build_tiles(ground_map, small_size)
-                
+    #------ this is the controller input---------
+    # joystick = pygame.joystick.Joystick(1)
+    
+    # axis = joystick.get_axis(0)
+    # button = joystick.get_button(0)
 
     keys = pygame.key.get_pressed()
-    state = controller.get_controller_states(joysticks)
-    if state['left']:
-        keys=pygame.key.get_pressed()
-        keys=keys[:pygame.K_a]+(1,)+keys[pygame.K_a+1:]
-    if state['right']:
-        keys=pygame.key.get_pressed()
-        keys=keys[:pygame.K_d]+(1,)+keys[pygame.K_d+1:]
-    if state['up']:
-        keys=pygame.key.get_pressed()
-        keys=keys[:pygame.K_w]+(1,)+keys[pygame.K_w+1:]
-    if state['jump']:
-        keys=pygame.key.get_pressed()
-        keys=keys[:pygame.K_SPACE]+(1,)+keys[pygame.K_SPACE+1:]
     # camera controls
     if editor_mode:
         # in editor mode, arrow keys pan the camera directly
