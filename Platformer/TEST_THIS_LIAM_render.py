@@ -1,6 +1,7 @@
 import pygame
 import os
 import glob
+import controller
 # --- Music ---
 try:
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
@@ -19,6 +20,10 @@ joysticks=[]
 try:
     pygame.mixer.music.load("Music cuz why not/Joyful Tone.mp3")  # Replace with your file path
     pygame.mixer.music.play()
+except Exception as e:
+    print(f"Error loading music: {e}")
+try:
+    controller.init()
 except Exception as e:
     print(f"Error loading music: {e}")
 # --- Setup ---
@@ -51,7 +56,7 @@ def get_image(file_name):
 
 # Example usage:
 screen = pygame.display.set_mode((800, 600))
-pygame.display.set_caption("Image Caching Example")
+pygame.display.set_caption("Najjar's Comet ")
 
 # Load images using the caching function
 try:
@@ -357,7 +362,7 @@ def load_tile_surfaces(extra_small_size,small_size, large_size,extra_large_size,
         'LT': load_tile("lava_tile.png", small_size),
         'WTT': load_tile("water_tile_top.png", small_size),
         'LTT': load_tile("lava_tile_top.png", small_size),
-           
+        
     }
 
 assets = load_tile_surfaces(extra_small_size,small_size, large_size,extra_large_size)
@@ -860,9 +865,10 @@ player_mask = pygame.mask.from_surface(player_image)
 # Movement state
 vel = pygame.Vector2(0, 0)
 speed = 4
-gravity = 0.6
-jump_speed = -11
+gravity = .9
+jump_speed = -16
 on_ground = False
+sensitivity=.3
 
 def resolve_player_collisions(dx, dy):
     """Move player by dx,dy and resolve collisions with ground_tiles using masks.
@@ -1120,6 +1126,10 @@ while running:
                     prev_room()
                 except Exception:
                     pass
+            elif event.key==pygame.K_m:
+                if event.key ==  pygame.K_m:
+                    player_rect.x=int(input("x cord?"))
+                    player_rect.y=int(input("y cord?"))
 
         elif event.type == pygame.VIDEORESIZE:
             screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
@@ -1157,40 +1167,25 @@ while running:
                 background_tiles = build_tiles(background_map, small_size)
                 ground_tiles = build_tiles(ground_map, small_size)
     # ---- external controller handaling ----
-    try:
-        joystick1x=round(pygame.joystick.Joystick(0).get_axis(0),2)
-        joystick1y=round(pygame.joystick.Joystick(0).get_axis(1),2)
-        joystick2x=round(pygame.joystick.Joystick(1).get_axis(0),2)
-        joystick2y=round(pygame.joystick.Joystick(1).get_axis(1),2)
-        trigger1=round(pygame.joystick.joistick(2).get_axis(0),2)
-        trigger1=round(pygame.joystick.joistick(3).get_axis(0),2)
-        axis_val={
-            "joystick1x":joystick1x,
-            "joystick1y":joystick1y,
-            "joystick2x":joystick2x,
-            "joystick2y":joystick2y,
-            "trigger1":trigger1,
-            "trigger2":trigger1
-        }
-    except Exception as e:
-        print(f"Joystick error: {e} at lines {e.__traceback__.tb_lineno}")
+    axiss,butons=controller.get_status()
     # ---- get buton status ----
     try:
-        buttonA=pygame.joystick.Joystick(0).get_button(0)
-        buttonB=pygame.joystick.Joystick(0).get_button(1)
-        buttonX=pygame.joystick.Joystick(0).get_button(2)
-        buttonY=pygame.joystick.Joystick(0).get_button(3)
-        left_bumper=pygame.joystick.Joystick(0).get_button(4)
-        right_bumper=pygame.joystick.Joystick(0).get_button(5)
-        left_joystick=pygame.joystick.Joystick(0).get_button(6)
-        right_joystick=pygame.joystick.Joystick(0).get_button(7)
-        windows_buton=pygame.joystick.Joystick(0).get_button(8)
-        xbuton=pygame.joystick.Joystick(0).get_button(9) #will not use
-        menu_buton=pygame.joystick.Joystick(0).get_button(10)
-        d_pad_up=pygame.joystick.Joystick(0).get_button(11)
-        d_pad_down=pygame.joystick.Joystick(0).get_button(12)
-        d_pad_left=pygame.joystick.Joystick(0).get_button(13)
-        d_pad_right=pygame.joystick.Joystick(0).get_button(14)
+        
+        buttonA=butons[0][0]
+        buttonB=butons[0][1]
+        buttonX=butons[0][2]
+        buttonY=butons[0][3]
+        left_bumper=butons[0][4]
+        right_bumper=butons[0][5]
+        left_joystickb=butons[0][6]
+        right_joystickb=butons[0][7]
+        windows_buton=butons[0][8]
+        xbuton=butons[0][9] #will not use
+        menu_buton=butons[0][10]
+        d_pad_up=butons[0][11]
+        d_pad_down=butons[0][12]
+        d_pad_left=butons[0][13]
+        d_pad_right=butons[0][14]
         buton_status={
             "buttonA":buttonA,
             "buttonB":buttonB,
@@ -1198,8 +1193,8 @@ while running:
             "buttonY":buttonY,
             "left_bumper":left_bumper,
             "right_bumper":right_bumper,
-            "left_joystick":left_joystick,
-            "right_joystick":right_joystick,
+            "left_joystick":left_joystickb,
+            "right_joystick":right_joystickb,
             "windows_buton":windows_buton,
             "xbuton going to be unused":xbuton,
             "menu_buton":menu_buton,
@@ -1208,9 +1203,24 @@ while running:
             "d_pad_left":d_pad_left,
             "d_pad_right":d_pad_right
         }
+        left_joystickx=round(axiss[0][0],2)
+        left_joysticky=round(axiss[0][1],2)
+        right_joystickx=round(axiss[0][2],2)
+        right_joysticky=round(axiss[0][3],2)
+        left_trigger=round(axiss[0][4],2)
+        left_trigger=round(axiss[0][5],2)
     except Exception as e:
         print(f"Joystick button error: {e} at lines {e.__traceback__.tb_lineno}")
     keys = pygame.key.get_pressed()
+        # player input (A/D or left/right), jump with W or SPACE or UP
+    move_x = 0
+    if abs(left_joystickx)>sensitivity:
+        move_x = speed*left_joystickx
+    if keys[pygame.K_a] or keys[pygame.K_LEFT] or buton_status['d_pad_left']:
+        move_x = -speed
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]or buton_status['d_pad_right']:
+        move_x = speed
+    
     # camera controls
     if editor_mode:
         # in editor mode, arrow keys pan the camera directly
@@ -1223,18 +1233,6 @@ while running:
             camera_offset.y += scroll_speed
         if keys[pygame.K_DOWN]:
             camera_offset.y -= scroll_speed
-        # controller controlliung
-        try:
-            if axis_val[joystick1x]<-0.2:
-                camera_offset.x += scroll_speed
-            if axis_val[joystick1x]>0.2:
-                camera_offset.x -= scroll_speed
-            if axis_val[joystick1y]<-0.2:
-                camera_offset.y += scroll_speed
-            if axis_val[joystick1y]>0.2:
-                camera_offset.y -= scroll_speed
-        except Exception as e:
-            print(f"Joystick camera control error: {e} at lines {e.__traceback__.tb_lineno}")
     else:
         # camera controls (Shift + arrows) when camera isn't following the player
         if not camera_follows:
@@ -1247,44 +1245,16 @@ while running:
                     camera_offset.y += scroll_speed
                 if keys[pygame.K_DOWN]:
                     camera_offset.y -= scroll_speed
-        # camera contolls by controller
-        try:
-            if not camera_follows and buton_status["windows_buton"]==1:
-                if abs(axis_val[joystick1x])>0.2:
-                    camera_offset.x+=-axis_val[joystick1x]*scroll_speed
-                if abs(axis_val[joystick1y])>0.2:
-                    camera_offset.y+=-axis_val[joystick1y]*scroll_speed
-        except Exception as e:
-            print(f"Joystick camera control error: {e} at lines {e.__traceback__.tb_lineno}")
-
-    # player input (A/D or left/right), jump with W or SPACE or UP
-    move_x = 0
-    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-        move_x = -speed
-    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-        move_x = speed
-    # controller player movement with a limit of speed
-    try:
-        if abs(axis_val[joystick2x])>0.2:
-            move_x=axis_val[joystick2x]*speed
-        if buton_status["d_pad_left"]==1:
-            move_x=-speed
-        if buton_status["d_pad_right"]==1:
-            move_x=speed
-    except Exception as e:
-        print(f"Joystick player movement error: {e} at lines {e.__traceback__.tb_lineno}")
+        
     # apply horizontal movement and resolve collisions
     resolve_player_collisions(move_x, 0)
 
     # jump (only when on ground)
-    if (keys[pygame.K_w] or keys[pygame.K_SPACE] or keys[pygame.K_UP]) and on_ground:
+    
+    if (keys[pygame.K_w] or keys[pygame.K_SPACE] or keys[pygame.K_UP]or buton_status["d_pad_up"]) and on_ground:
         vel.y = jump_speed
-    # controller jump
-    try:
-        if (buton_status["buttonA"]==1 or buton_status["d_pad_up"]==1) and on_ground:
-            vel.y=jump_speed
-    except Exception as e:
-        print(f"Joystick jump error: {e} at lines {e.__traceback__.tb_lineno}")
+    if left_joysticky<-sensitivity and on_ground:
+        vel.y = jump_speed*-left_joysticky
     # apply gravity
     vel.y += gravity
 
@@ -1355,6 +1325,8 @@ while running:
         "A/D or ←/→ - Player move  |  W / Space / ↑ - Jump",
         "G - Toggle grid  |  F - Toggle fullscreen",
         "[ / ] - Previous / Next room",
+        f"joystics: {axiss}",
+        f"buttons: {butons}"
     ]
 
     line_h = font.get_linesize()

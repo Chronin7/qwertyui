@@ -1,36 +1,50 @@
-import pygame,os
-import time
+import pygame, os, time
+
+# Global list to store joystick objects
+joysticks = []
+
 def init():
-    pass
+    global joysticks
+    pygame.init()
+    pygame.joystick.init()
+    time.sleep(1)  # Allow time for OS to register joystick
+    joysticks = [pygame.joystick.Joystick(i) for i in range(pygame.joystick.get_count())]
+    for js in joysticks:
+        js.init()
+    print(f"Detected {len(joysticks)} joystick(s).")
+    for i, js in enumerate(joysticks):
+        print(f"Joystick {i}: {js.get_name()}")
+
 def get_status():
-    pass
+    pygame.event.pump()  # Update joystick state
+    axes_list = []
+    buttons_list = []
+    for js in joysticks:
+        axes = [round(js.get_axis(a), 3) for a in range(js.get_numaxes())]
+        buttons = [js.get_button(b) for b in range(js.get_numbuttons())]
+        axes_list.append(axes)
+        buttons_list.append(buttons)
+    return axes_list, buttons_list
+
 def end():
+    for js in joysticks:
+        js.quit()
     pygame.joystick.quit()
     pygame.quit()
-    os._exit(0)
-    quit()
-pygame.init()
-pygame.joystick.init()
+    print("Joystick and Pygame shutdown complete.")
 
+# Run the program
+if __name__=="__main__":
+	init()
 
-# Initialize all detected joysticks
-for i in range(pygame.joystick.get_count()):
-	pygame.joystick.Joystick(i).init()
-
-print(f"Detected {pygame.joystick.get_count()} joystick(s).")
-for i in range(pygame.joystick.get_count()):
-	print(f"Joystick {i}: {pygame.joystick.Joystick(i).get_name()}")
-#init butttons
-while True:
-	# Process events to keep input states updated
-	pygame.event.pump()
-	# Read joystick states
-	for i in range(pygame.joystick.get_count()):
-		joystick = pygame.joystick.Joystick(i)
-		axes = [round(joystick.get_axis(a),3) for a in range(joystick.get_numaxes())]
-		buttons = [round(joystick.get_button(b),3) for b in range(joystick.get_numbuttons())]
-		os.system('cls' if os.name == 'nt' else 'clear')
-		print(f"axes: {axes}")
-		print(f"buttons: {buttons}")
-
-	
+	try:
+		while True:
+			axes, buttons = get_status()
+			os.system('cls' if os.name == 'nt' else 'clear')
+			for i in range(len(axes)):
+				print(f"Joystick {i} axes: {axes[i]}")
+				print(f"Joystick {i} buttons: {buttons[i]}")
+				print(buttons)
+			time.sleep(0.1)
+	except KeyboardInterrupt:
+		end()
