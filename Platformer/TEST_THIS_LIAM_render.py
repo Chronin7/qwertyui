@@ -3,6 +3,7 @@ import os
 import glob
 import controller
 # --- Music ---
+controller_on=True
 try:
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
     os.chdir(PROJECT_ROOT)
@@ -1210,15 +1211,22 @@ while running:
         left_trigger=round(axiss[0][4],2)
         left_trigger=round(axiss[0][5],2)
     except Exception as e:
-        print(f"Joystick button error: {e} at lines {e.__traceback__.tb_lineno}")
+        controller_on=False
     keys = pygame.key.get_pressed()
         # player input (A/D or left/right), jump with W or SPACE or UP
     move_x = 0
-    if abs(left_joystickx)>sensitivity:
-        move_x = speed*left_joystickx
-    if keys[pygame.K_a] or keys[pygame.K_LEFT] or buton_status['d_pad_left']:
+    try:
+        if abs(left_joystickx)>sensitivity:
+            move_x = speed*left_joystickx
+        if buton_status['d_pad_right']:
+            move_x = speed
+        if buton_status['d_pad_left']:
+            move_x = -speed
+    except:
+        controller_on=False
+    if keys[pygame.K_a] or keys[pygame.K_LEFT]:
         move_x = -speed
-    if keys[pygame.K_d] or keys[pygame.K_RIGHT]or buton_status['d_pad_right']:
+    if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
         move_x = speed
     
     # camera controls
@@ -1251,10 +1259,15 @@ while running:
 
     # jump (only when on ground)
     
-    if (keys[pygame.K_w] or keys[pygame.K_SPACE] or keys[pygame.K_UP]or buton_status["d_pad_up"]) and on_ground:
+    if (keys[pygame.K_w] or keys[pygame.K_SPACE] or keys[pygame.K_UP]) and on_ground:
         vel.y = jump_speed
-    if left_joysticky<-sensitivity and on_ground:
-        vel.y = jump_speed*-left_joysticky
+    try:
+        if (buton_status["d_pad_up"]or buton_status["buttonA"]) and on_ground:
+            vel.y = jump_speed
+        if left_joysticky<-sensitivity and on_ground:
+            vel.y = jump_speed*-left_joysticky
+    except:
+        controller_on=False
     # apply gravity
     vel.y += gravity
 
