@@ -1338,6 +1338,7 @@ while running:
         "A/D or ←/→ - Player move  |  W / Space / ↑ - Jump",
         "G - Toggle grid  |  F - Toggle fullscreen",
         "[ / ] - Previous / Next room",
+        "m - teleport",
         f"joystics: {axiss}",
         f"buttons: {butons}"
     ]
