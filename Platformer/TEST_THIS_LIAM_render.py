@@ -1023,7 +1023,7 @@ running = True
 editor_mode = False
 editing_ground = False  # if True edit ground_template, else background_template
 # order of editable keys (two-letter names) for selection with + / -
-key_order = ['AA', 'BA', 'BB', 'SP', 'FG', 'FA', 'FB', 'FC', 'FD', 'FE', 'FF', 'FH', 'FI', 'FJ', 'FK', 'FL', 'FM']
+key_order = ['AA', 'BA', 'BB', 'SP', 'FG', 'FA', 'FB', 'FC', 'FD', 'FE', 'FF', 'FH', 'FI', 'FJ', 'FK', 'FL', 'FM','DR','DL','DU','DD','PW1','PW2','PW3','PW4','PW5','PW6','PW7','BS1','BS2','BS3','BS4','BS5','BS6','BS7','EN1','EN2','EN3','EN4','EN5','EN6','EN7','EN8','EN9','EN10','EN11','EN12','EN13','EN14','EN15','EN16','EN17','EN18','EN19','EN20','EN21','EN22','EN23','EN24','EN25','EN26','EN27','EN28','EN29','EN30','WT','LT','WTT','LTT','CRR','CRRL','CRO','CROL','CRG','CRGL','CRT','CRTL','CRB','CRBL','CRDB','CRDBL','CRPU','CRPUL','CRP','CRPL','CRS','CRSL']
 selected_idx = 0
 
 # map key names to Key tokens so templates can be assigned without quotes
