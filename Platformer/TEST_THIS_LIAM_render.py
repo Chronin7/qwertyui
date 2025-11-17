@@ -1012,6 +1012,66 @@ def resolve_player_collisions(dx, dy):
 
     return landed
 
+import pygame
+
+# Initialize pygame if you haven't already in your main script
+# pygame.init() 
+
+class Entity:
+    """
+    the class for entetys
+    """
+    def __init__(self, xpos, ypos, room, typee, file_path, interaction_with_player, item_type, atack_pattern, static, colishon_with):
+        self.xpos = xpos
+        self.ypos = ypos
+        self.room = room
+        self.typee = typee
+        self.image_path = file_path
+        self.iter_with_play = interaction_with_player
+        self.item_type = item_type
+        self.atack_pattern = atack_pattern
+        self.static = static
+        self.colishon_with = colishon_with#list
+        try:
+            self.image = pygame.image.load(file_path).convert_alpha()
+            self.rect = self.image.get_rect(topleft=(self.xpos, self.ypos))
+            self.mask = pygame.mask.from_surface(self.image)
+        except pygame.error as e:
+            print(f"Error loading image at {file_path}: {e}")
+            self.image = pygame.Surface((32, 32), pygame.SRCALPHA) # Create a dummy surface
+            self.rect = self.image.get_rect(topleft=(self.xpos, self.ypos))
+            self.mask = pygame.mask.from_surface(self.image)
+
+    def update_position(self, x, y):
+        """Helper function to move the entity and its rect."""
+        self.xpos = x
+        self.ypos = y
+        self.rect.topleft = (x, y)
+
+    def colishon(self, other_entity):
+        """
+        Checks for pixel-perfect collision with another entity.
+        
+        :param other_entity: The other Entity object to check collision against.
+        :return: True if a collision occurred, False otherwise.
+        """
+        # 1. Calculate the offset between the two entities
+        # offset_x is how far the other entity is from this entity's top-left corner.
+        offset_x = other_entity.rect.left - self.rect.left
+        offset_y = other_entity.rect.top - self.rect.top
+
+        # 2. Use the mask's 'overlap' method
+        # This method returns the point of overlap or None if no overlap occurs.
+        overlap_point = self.mask.overlap(other_entity.mask, (offset_x, offset_y))
+
+        if overlap_point:
+            # Collision detected
+            return True
+        else:
+            # No collision
+            return False
+    def atack():
+        pass
 # --- Main loop ---
 camera_offset = pygame.Vector2(0, 0)
 scroll_speed = 10
